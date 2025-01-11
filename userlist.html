@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#00c6ff">
+  <title>User List</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>User List</h1>
+    <section>
+      <ul id="userListUl" aria-live="polite">
+        <!-- User list will appear here -->
+      </ul>
+    </section>
+  </div>
+
+  <script type="module">
+    import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_UjSLiTFca7sEs6Xjo3KJt3gv7irm4yM",
+      authDomain: "last-try-e2368.firebaseapp.com",
+      projectId: "last-try-e2368",
+      storageBucket: "last-try-e2368.appspot.com",
+      messagingSenderId: "96302628355",
+      appId: "1:96302628355:web:a87f636cec98c89d2f9836"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const userListUl = document.getElementById("userListUl");
+
+    // Real-time listener for user data from Firestore
+    onSnapshot(collection(db, "users"), (querySnapshot) => {
+      // Clear existing user list before adding updated data
+      userListUl.innerHTML = "";
+
+      // Iterate over each user in the collection and display them
+      querySnapshot.forEach((doc) => {
+        const username = doc.id;
+        const exp = doc.data().exp || 0;
+
+        const listItem = document.createElement("li");
+        listItem.textContent = `${username} (EXP: ${exp})`;
+        userListUl.appendChild(listItem);
+      });
+    });
+  </script>
+</body>
+</html>

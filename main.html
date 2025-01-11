@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#00c6ff">
+  <title>EXP Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>EXP Tracker</h1>
+    <section class="add-username">
+      <input id="usernameInput" type="text" placeholder="Enter Username" aria-label="Username Input">
+      <button id="addUsernameBtn" aria-label="Add Username">Add Username</button>
+    </section>
+    <section class="exp-section">
+      <label for="usernameSelect">Select Username:</label>
+      <select id="usernameSelect" aria-label="Username Select">
+        <option value="" disabled selected>Select Username</option>
+      </select>
+      <div class="exp-inputs">
+        <input id="hoursInput" type="number" placeholder="Hours" aria-label="Hours">
+        <input id="minutesInput" type="number" placeholder="Minutes" aria-label="Minutes">
+      </div>
+      <button id="confirmBtn" aria-label="Confirm EXP Entry">Confirm</button>
+
+      <div class="manual-exp">
+        <input id="manualExpInput" type="number" placeholder="Manual EXP" aria-label="Manual EXP">
+        <button id="addManualExpBtn" aria-label="Add Manual EXP">Add Manual EXP</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>User List</h2>
+      <ul id="userListUl" aria-live="polite">
+      </ul>
+      <button id="removeSelectedBtn" aria-label="Remove Selected Users">Remove Selected</button>
+    </section>
+  </div>
+  <script type="module">
+    // Firebase configuration and initialization
+    import { getFirestore, doc, setDoc, getDocs, collection, updateDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_UjSLiTFca7sEs6Xjo3KJt3gv7irm4yM",
+      authDomain: "last-try-e2368.firebaseapp.com",
+      projectId: "last-try-e2368",
+      storageBucket: "last-try-e2368.appspot.com",
+      messagingSenderId: "96302628355",
+      appId: "1:96302628355:web:a87f636cec98c89d2f9836"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const usernameInput = document.getElementById("usernameInput");
+    const addUsernameBtn = document.getElementById("addUsernameBtn");
+    const usernameSelect = document.getElementById("usernameSelect");
+    const userListUl = document.getElementById("userListUl");
+    const confirmBtn = document.getElementById("confirmBtn");
+    const hoursInput = document.getElementById("hoursInput");
+    const minutesInput = document.getElementById("minutesInput");
+
+    // Add a user to Firestore
+    async function addUserToFirestore(username) {
+      try {
+        const userRef = doc(db, "users", username);
+        await setDoc(userRef, { exp: 0 });
+        console.log(`User ${username} added to Firestore.`);
+        alert(`User ${username} added successfully!`);
+      } catch (error) {
+        console.error("Error adding user to Firestore:", error);
+        alert("An error occurred while adding the user.");
+      }
+    }
+
+    // Add user to dropdown and user list
+    function addUserToList(username, exp = 0) {
+      const option = document.createElement("option");
+      option.value = username;
+      option.textContent = username;
+      usernameSelect.appendChild(option);
+
+      const listItem = document.createElement("li");
+      listItem.textContent = `${username} (EXP: ${exp})`;
+      userListUl.appendChild(listItem);
+    }
+
+    // Handle "Add Username" button click
+    addUsernameBtn.addEventListener("click", async function () {
+      const username = usernameInput.value.trim();
+
+      if (username === "") {
+        alert("Username cannot be empty.");
+        return;
+      }
+
+      const existingUsernames = [...usernameSelect.options].map(option => option.value);
+      if (existingUsernames.includes(username)) {
+        alert("This username already exists.");
+        return;
+      }
+
+      await addUserToFirestore(username);
+      addUserToList(username);
+      usernameInput.value = "";
+    });
+
+    // Real-time listener for user data updates
+    function listenForUserUpdates() {
+      const usersRef = collection(db, "users");
+
+      onSnapshot(usersRef, (querySnapshot) => {
+        userListUl.innerHTML = '';  // Clear the current list
+        querySnapshot.forEach((doc) => {
+          const username = doc.id;
+          const exp = doc.data().exp || 0;
+          addUserToList(username, exp);
+        });
+      });
+    }
+
+    // Update EXP based on study time (hours and minutes)
+    confirmBtn.addEventListener("click", async function () {
+      const username = usernameSelect.value;
+      const hours = parseInt(hoursInput.value);
+      const minutes = parseInt(minutesInput.value);
+
+      if (!username) {
+        alert("Please select a username.");
+        return;
+      }
+
+      if (isNaN(hours) || isNaN(minutes)) {
+        alert("Please enter valid hours and minutes.");
+        return;
+      }
+
+      try {
+        // Calculate total minutes and EXP
+        const totalMinutes = hours * 60 + minutes;
+        const addedExp = Math.floor(totalMinutes / 60) * 2 + Math.floor((totalMinutes % 60) / 30);
+
+        const userRef = doc(db, "users", username);
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+          const currentExp = userDoc.data().exp || 0;
+          const updatedExp = currentExp + addedExp;
+
+          // Update EXP in Firestore
+          await updateDoc(userRef, { exp: updatedExp });
+
+          // Update UI
+          updateUserInList(username, updatedExp);
+          alert(`EXP updated! Added ${addedExp} EXP.`);
+          console.log(`Updated ${username} with ${addedExp} EXP.`);
+        } else {
+          alert("User not found in Firestore.");
+        }
+      } catch (error) {
+        console.error("Error updating EXP:", error);
+        alert("An error occurred while updating EXP.");
+      }
+    });
+
+    // Update a user in the list after updating EXP
+    function updateUserInList(username, newExp) {
+      const userListItems = document.querySelectorAll("li");
+      userListItems.forEach(item => {
+        if (item.textContent.includes(username)) {
+          item.textContent = `${username} (EXP: ${newExp})`;
+        }
+      });
+    }
+
+    // Load user data on page load and start real-time listener
+    document.addEventListener("DOMContentLoaded", async function () {
+      listenForUserUpdates();  // Set up real-time updates
+    });
+  </script>
+</body>
+</html>
