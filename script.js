@@ -25,6 +25,14 @@ const hoursInput = document.getElementById("hoursInput");
 const minutesInput = document.getElementById("minutesInput");
 const confirmBtn = document.getElementById("confirmBtn");
 
+// Check for allowed email addresses
+const allowedEmails = ["vishal16980@gmail.com", "07.comer@gmail.com", "rtshroudyt@gmail.com"];
+
+// Function to check if the user is authorized
+function isUserAuthorized(userEmail) {
+  return allowedEmails.includes(userEmail);
+}
+
 // Add a new username to Firestore
 async function addUserToFirestore(username) {
   try {
@@ -148,5 +156,12 @@ addUsernameBtn.addEventListener("click", async function () {
 
 // Load user data on page load
 document.addEventListener("DOMContentLoaded", async function () {
-  await loadUserData();
+  // You can check if the current user is authorized here and load data accordingly
+  const user = firebase.auth().currentUser;  // Ensure you have initialized Firebase Auth in your project
+  if (user && isUserAuthorized(user.email)) {
+    await loadUserData();
+  } else {
+    alert("You are not authorized to view this page.");
+    window.location.href = 'login.html';  // Redirect to login if unauthorized
+  }
 });
