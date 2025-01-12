@@ -125,16 +125,21 @@
     // Update EXP based on study time (hours and minutes)
     confirmBtn.addEventListener("click", async function () {
       const username = usernameSelect.value;
-      const hours = parseInt(hoursInput.value);
-      const minutes = parseInt(minutesInput.value);
+      let hours = parseInt(hoursInput.value);
+      let minutes = parseInt(minutesInput.value);
+
+      // If minutes input is empty or invalid, set to zero
+      if (isNaN(minutes)) {
+        minutes = 0;
+      }
 
       if (!username) {
         alert("Please select a username.");
         return;
       }
 
-      if (isNaN(hours) || isNaN(minutes)) {
-        alert("Please enter valid hours and minutes.");
+      if (isNaN(hours)) {
+        alert("Please enter valid hours.");
         return;
       }
 
@@ -143,20 +148,25 @@
         const totalMinutes = hours * 60 + minutes;
         const addedExp = Math.floor(totalMinutes / 60) * 2 + Math.floor((totalMinutes % 60) / 30);
 
+        // Bonus EXP for every 10 hours of study
+        const totalHours = totalMinutes / 60;
+        const bonusExp = Math.floor(totalHours / 10) * 5; // Add 5 EXP for every 10 hours
+        const finalExp = addedExp + bonusExp;
+
         const userRef = doc(db, "users", username);
         const userDoc = await getDoc(userRef);
 
         if (userDoc.exists()) {
           const currentExp = userDoc.data().exp || 0;
-          const updatedExp = currentExp + addedExp;
+          const updatedExp = currentExp + finalExp;
 
           // Update EXP in Firestore
           await updateDoc(userRef, { exp: updatedExp });
 
           // Update UI
           updateUserInList(username, updatedExp);
-          alert(`EXP updated! Added ${addedExp} EXP.`);
-          console.log(`Updated ${username} with ${addedExp} EXP.`);
+          alert(`EXP updated! Added ${addedExp} EXP + ${bonusExp} bonus EXP.`);
+          console.log(`Updated ${username} with ${addedExp} EXP and ${bonusExp} bonus EXP.`);
         } else {
           alert("User not found in Firestore.");
         }
