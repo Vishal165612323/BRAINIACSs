@@ -6,12 +6,39 @@
   <meta name="theme-color" content="#00c6ff">
   <title>User List</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      color: black;
+    }
+    .user-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .username {
+      flex: 1;
+      text-align: left;
+    }
+    .exp {
+      flex: 1;
+      text-align: right;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>User List</h1>
     <section>
-      <ul id="userListUl" aria-live="polite">
+      <ul id="userListUl" class="user-list" aria-live="polite">
         <!-- User list will appear here -->
       </ul>
     </section>
@@ -36,16 +63,35 @@
 
     // Real-time listener for user data from Firestore
     onSnapshot(collection(db, "users"), (querySnapshot) => {
-      // Clear existing user list before adding updated data
-      userListUl.innerHTML = "";
-
-      // Iterate over each user in the collection and display them
+      // Collect users into an array and sort by EXP in descending order
+      const users = [];
       querySnapshot.forEach((doc) => {
         const username = doc.id;
         const exp = doc.data().exp || 0;
+        users.push({ username, exp });
+      });
 
+      users.sort((a, b) => b.exp - a.exp); // Sort by EXP descending
+
+      // Clear existing user list before adding updated data
+      userListUl.innerHTML = "";
+
+      // Iterate over sorted users and display them
+      users.forEach(({ username, exp }) => {
         const listItem = document.createElement("li");
-        listItem.textContent = `${username} (EXP: ${exp})`;
+        listItem.className = "user-item";
+
+        const usernameDiv = document.createElement("div");
+        usernameDiv.className = "username";
+        usernameDiv.textContent = username;
+
+        const expDiv = document.createElement("div");
+        expDiv.className = "exp";
+        expDiv.textContent = `EXP: ${exp}`;
+
+        listItem.appendChild(usernameDiv);
+        listItem.appendChild(expDiv);
+
         userListUl.appendChild(listItem);
       });
     });
